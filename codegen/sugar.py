@@ -5,6 +5,7 @@ from codegen.operands import *
 
 import architecture
 
+
 # Convenient statement constructors
 def add(src: Union[Operand, int], dest: Register, comment: str = None, additional: Register = None):
     stmt = AddStmt()
@@ -14,10 +15,12 @@ def add(src: Union[Operand, int], dest: Register, comment: str = None, additiona
     stmt.additional = additional
     return stmt
 
+
 def label(name: str):
     stmt = LabelStmt()
     stmt.label = architecture.operands.l(name)
     return stmt
+
 
 def fma(bcast_src: Register, mult_src: Register, add_dest: Register, comment: str = None, bcast: bool = True):
     stmt = FmaStmt()
@@ -28,6 +31,7 @@ def fma(bcast_src: Register, mult_src: Register, add_dest: Register, comment: st
     stmt.bcast = bcast
     return stmt
 
+
 def mul(src: Register, mult_src: Register, dest: Register, comment: str = None):
     stmt = MulStmt()
     stmt.src = src
@@ -36,6 +40,7 @@ def mul(src: Register, mult_src: Register, dest: Register, comment: str = None):
     stmt.comment = comment
     return stmt
 
+
 def bcst(bcast_src: Register, dest: Register, comment: str = None):
     stmt = BcstStmt()
     stmt.bcast_src = bcast_src
@@ -43,18 +48,21 @@ def bcst(bcast_src: Register, dest: Register, comment: str = None):
     stmt.comment = comment
     return stmt
 
+
 def cmp(lhs: Union[Operand, int], rhs: Union[Operand, int]):
     stmt = CmpStmt()
     stmt.lhs = lhs if isinstance(lhs, Operand) else architecture.operands.c(lhs)
     stmt.rhs = rhs if isinstance(rhs, Operand) else architecture.operands.c(rhs)
     return stmt
 
+
 def jump(label: str, backwards=True):
     stmt = JumpStmt()
     stmt.destination = architecture.operands.l(label)
     return stmt
 
-def mov(src: Union[Operand, int], dest: Operand, vector: bool, comment:str = None):
+
+def mov(src: Union[Operand, int], dest: Operand, vector: bool, comment: str = None):
     stmt = MovStmt()
     stmt.src = src if isinstance(src, Operand) else architecture.operands.c(src)
     stmt.dest = dest
@@ -67,7 +75,8 @@ def mov(src: Union[Operand, int], dest: Operand, vector: bool, comment:str = Non
         stmt.typ = AsmType.i64
     return stmt
 
-def lea(src: Register, dest: Operand, offset: int, comment:str = None):
+
+def lea(src: Register, dest: Operand, offset: int, comment: str = None):
     stmt = LeaStmt()
     stmt.src = src
     stmt.dest = dest
@@ -75,7 +84,8 @@ def lea(src: Register, dest: Operand, offset: int, comment:str = None):
     stmt.comment = comment
     return stmt
 
-def ld(src: Union[Operand, int], dest: Operand, vector: bool, comment:str = None, dest2: Operand = None):
+
+def ld(src: Union[Operand, int], dest: Operand, vector: bool, comment: str = None, dest2: Operand = None):
     stmt = LoadStmt()
     stmt.src = src if isinstance(src, Operand) else architecture.operands.c(src)
     stmt.dest = dest
@@ -89,7 +99,8 @@ def ld(src: Union[Operand, int], dest: Operand, vector: bool, comment:str = None
         stmt.typ = AsmType.i64
     return stmt
 
-def st(src: Union[Operand, int], dest: Operand, vector: bool, comment:str = None, src2: Operand = None):
+
+def st(src: Union[Operand, int], dest: Operand, vector: bool, comment: str = None, src2: Operand = None):
     stmt = StoreStmt()
     stmt.src = src if isinstance(src, Operand) else architecture.operands.c(src)
     stmt.src2 = src2
@@ -103,11 +114,13 @@ def st(src: Union[Operand, int], dest: Operand, vector: bool, comment:str = None
         stmt.typ = AsmType.i64
     return stmt
 
-def prefetch(dest: Operand, comment:str = None):
+
+def prefetch(dest: Operand, comment: str = None):
     stmt = PrefetchStmt()
     stmt.dest = dest
     stmt.comment = comment
     return stmt
+
 
 def data(value: Union[Operand, int], asmType=AsmType.i64):
     stmt = DataStmt()
@@ -139,7 +152,6 @@ class BlockBuilder(Block):
     def body(self, *args):
         self.contents = list(args)
         return self
-
 
 
 # S-expression interface

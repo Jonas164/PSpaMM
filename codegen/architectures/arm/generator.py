@@ -8,7 +8,6 @@ from codegen.precision import *
 
 
 class Generator(AbstractGenerator):
-
     template = """
 void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {real_type} alpha, {real_type} beta, const {real_type}* prefetch) {{{{
   __asm__ __volatile__(
@@ -34,21 +33,21 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
 
     def get_v_size(self):
         if self.precision == Precision.DOUBLE:
-          return 2
+            return 2
         raise NotImplementedError
 
     def get_template(self):
         return Generator.template
 
-    def make_reg_blocks(self, bm:int, bn:int, bk:int, v_size:int, nnz:int, m:int, n:int, k:int):
-        assert(bm % v_size == 0)
-        vm = bm//v_size
-        assert((bn+bk) * vm + bn * bk + 2<= 32)  # Needs to fit in NEON v registers
+    def make_reg_blocks(self, bm: int, bn: int, bk: int, v_size: int, nnz: int, m: int, n: int, k: int):
+        assert (bm % v_size == 0)
+        vm = bm // v_size
+        assert ((bn + bk) * vm + bn * bk + 2 <= 32)  # Needs to fit in NEON v registers
 
-        A_regs = Matrix([[v(vm*c + r + 2) for c in range(bk)] for r in range(vm)])
-        B_regs = Matrix([[v(vm*bk + 2 + bn * r + c) for c in range(bn)] for r in range(bk)])
-        C_regs = Matrix([[v(32 - vm*bn + vm*c + r) for c in range(bn)]
-                                                   for r in range(vm)])
+        A_regs = Matrix([[v(vm * c + r + 2) for c in range(bk)] for r in range(vm)])
+        B_regs = Matrix([[v(vm * bk + 2 + bn * r + c) for c in range(bn)] for r in range(bk)])
+        C_regs = Matrix([[v(32 - vm * bn + vm * c + r) for c in range(bn)]
+                         for r in range(vm)])
         alpha_reg = [v(0), v(0)]
 
         beta_reg = [v(1), v(1)]
@@ -61,7 +60,6 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
 
         return A_regs, B_regs, C_regs, starting_regs, alpha_reg, beta_reg, loop_reg, additional_regs
 
-
     def bcst_alpha_beta(self,
                         alpha_reg: Register,
                         beta_reg: Register,
@@ -69,21 +67,20 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
 
         asm = block("Broadcast alpha and beta so that efficient multiplication is possible")
 
-        
         return asm
 
     def make_scaling_offsets(self,
-                         additional_regs: List[Register],
-                         nnz: int
-                        ) -> Block:
+                             additional_regs: List[Register],
+                             nnz: int
+                             ) -> Block:
 
         asm = block("No register based scaling")
         return asm
 
     def make_b_pointers(self,
-                         B_reg: Register,
-                         additional_regs: List[Register],
-                         nnz: int
+                        B_reg: Register,
+                        additional_regs: List[Register],
+                        nnz: int
                         ) -> Block:
 
         asm = block("No register based scaling")
@@ -113,42 +110,45 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
                 if skipflag:
                     skipflag = False
                     continue
-                if (mask is None) or (mask[ir,ic]):
-                    cell_offset = Coords(down=ir*v_size, right=ic)
+                if (mask is None) or (mask[ir, ic]):
+                    cell_offset = Coords(down=ir * v_size, right=ic)
                     addr, comment = cursor.look(cursor_ptr, block_offset, cell_offset)
                     addr.disp += 8 * load_offset
                     next_offset = [0, 0]
-                    if ir+1 < rows:
+                    if ir + 1 < rows:
                         next_offset = [1, 0]
-                    elif ic +1 < rows:
+                    elif ic + 1 < rows:
                         next_offset = [0, 1]
 
-                    addr_next, comment_next = cursor.look(cursor_ptr, block_offset, Coords(down=(ir+next_offset[0])*v_size, right=ic+next_offset[1]))
+                    addr_next, comment_next = cursor.look(cursor_ptr, block_offset,
+                                                          Coords(down=(ir + next_offset[0]) * v_size,
+                                                                 right=ic + next_offset[1]))
                     addr_next.disp += 8 * load_offset
                     if addr_next.disp == addr.disp + 8 * v_size:
                         skipflag = True
                     if addr.disp > 255:
-                        if(addr.disp - cur11 > 0 and addr.disp - cur11 < 256):
+                        if (addr.disp - cur11 > 0 and addr.disp - cur11 < 256):
                             addr.disp = addr.disp - cur11
                         else:
                             asm.add(add(addr.disp, additional_regs[0], "", addr.base))
                             cur11 = addr.disp
                             addr.disp = 0
                         addr.base = additional_regs[0]
-                
+
                 if not skipflag:
                     if store:
-                        asm.add(st(registers[ir,ic], addr, True, comment))
+                        asm.add(st(registers[ir, ic], addr, True, comment))
                     else:
-                        asm.add(ld(addr, registers[ir,ic], True, comment))
+                        asm.add(ld(addr, registers[ir, ic], True, comment))
                 else:
                     if store:
-                        asm.add(st(registers[ir,ic], addr, True, comment, registers[ir+next_offset[0],ic+next_offset[1]]))
+                        asm.add(st(registers[ir, ic], addr, True, comment,
+                                   registers[ir + next_offset[0], ic + next_offset[1]]))
                     else:
-                        asm.add(ld(addr, registers[ir,ic], True, comment, registers[ir+next_offset[0],ic+next_offset[1]]))
+                        asm.add(ld(addr, registers[ir, ic], True, comment,
+                                   registers[ir + next_offset[0], ic + next_offset[1]]))
 
         return asm
-
 
     def make_zero_block(self, registers: Matrix[Register], additional_regs) -> Block:
 
@@ -156,11 +156,10 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
         asm = block("zero registers")
 
         for ic in range(cols):
-          for ir in range(rows):
-              asm.add(mov(additional_regs[1], registers[ir,ic], True))
+            for ir in range(rows):
+                asm.add(mov(additional_regs[1], registers[ir, ic], True))
 
         return asm
-
 
     def make_microkernel(self,
                          A: Cursor,
@@ -170,7 +169,7 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
                          A_regs: Matrix[Register],
                          B_regs,
                          C_regs: Matrix[Register],
-                         v_size:int,
+                         v_size: int,
                          additional_regs,
                          to_A_block: Coords = Coords(),
                          to_B_block: Coords = Coords()
@@ -184,9 +183,9 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
         """
 
         asm = block("Block GEMM microkernel")
-        bm,bk,aidx,apattern = A.get_block(A_ptr, to_A_block)
-        bk,bn,bidx,bpattern = B.get_block(B_ptr, to_B_block)
-        assert(bm % v_size == 0)
+        bm, bk, aidx, apattern = A.get_block(A_ptr, to_A_block)
+        bk, bn, bidx, bpattern = B.get_block(B_ptr, to_B_block)
+        assert (bm % v_size == 0)
 
         mask = sparse_mask(A_regs, A, A_ptr, to_A_block, B, B_ptr, to_B_block, v_size)
         asm.add(self.move_register_block(A, A_ptr, to_A_block, A_regs, v_size, additional_regs, mask, store=False))
@@ -194,15 +193,15 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
         x = 0;
         bs = []
         cur11 = -1000
-        for Vmi in range(bm//v_size):
-            for bki in range(bk):       # inside this k-block
-                for bni in range(bn):   # inside this n-block
+        for Vmi in range(bm // v_size):
+            for bki in range(bk):  # inside this k-block
+                for bni in range(bn):  # inside this n-block
                     to_cell = Coords(down=bki, right=bni)
                     if B.has_nonzero_cell(B_ptr, to_B_block, to_cell):
                         B_cell_addr, B_comment = B.look(B_ptr, to_B_block, to_cell)
                         if B_regs[bki, bni] not in bs:
                             if B_cell_addr.disp > 255:
-                                if(B_cell_addr.disp - cur11 > 0 and B_cell_addr.disp - cur11 < 256):
+                                if (B_cell_addr.disp - cur11 > 0 and B_cell_addr.disp - cur11 < 256):
                                     B_cell_addr.disp = B_cell_addr.disp - cur11
                                 else:
                                     asm.add(add(B_cell_addr.disp, additional_regs[0], "", B_cell_addr.base))
@@ -210,20 +209,22 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
                                     B_cell_addr.disp = 0
 
                                 B_cell_addr.base = additional_regs[0]
-                  
+
                             asm.add(ld(B_cell_addr, B_regs[bki, bni], True, B_comment))
                             bs.append(B_regs[bki, bni])
 
-        for Vmi in range(bm//v_size):
-            for bki in range(bk):       # inside this k-block
-                for bni in range(bn):   # inside this n-block
+        for Vmi in range(bm // v_size):
+            for bki in range(bk):  # inside this k-block
+                for bni in range(bn):  # inside this n-block
                     to_cell = Coords(down=bki, right=bni)
                     if B.has_nonzero_cell(B_ptr, to_B_block, to_cell):
                         B_cell_addr, B_comment = B.look(B_ptr, to_B_block, to_cell)
-                        comment = "C[{}:{},{}] += A[{}:{},{}]*{}".format(Vmi*v_size, Vmi*v_size+v_size, bni, Vmi*v_size, Vmi*v_size+v_size, bki, B_comment)
+                        comment = "C[{}:{},{}] += A[{}:{},{}]*{}".format(Vmi * v_size, Vmi * v_size + v_size, bni,
+                                                                         Vmi * v_size, Vmi * v_size + v_size, bki,
+                                                                         B_comment)
                         asm.add(fma(B_regs[bki, bni], A_regs[Vmi, bki], C_regs[Vmi, bni], comment=comment))
         return asm
 
-
-    def init_prefetching(self, prefetching):            
-        Generator.template = Generator.template.format(prefetching_mov = "", prefetching_decl = '', funcName = "{funcName}", body_text ="{body_text}", clobbered = "{clobbered}")        
+    def init_prefetching(self, prefetching):
+        Generator.template = Generator.template.format(prefetching_mov="", prefetching_decl='', funcName="{funcName}",
+                                                       body_text="{body_text}", clobbered="{clobbered}")

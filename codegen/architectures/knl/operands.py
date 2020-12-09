@@ -20,13 +20,13 @@ def c(n):
     return Constant_KNL(value=int(n))
 
 
-
 class Label_KNL(Label):
 
     @property
     def ugly(self):
-        #return self.ordinal
+        # return self.ordinal
         return self.value.upper() + "_%="
+
 
 def l(label: str):
     return Label_KNL(label)
@@ -46,16 +46,14 @@ rdx = Register_KNL(AsmType.i64, "rdx")
 rdi = Register_KNL(AsmType.i64, "rdi")
 rsi = Register_KNL(AsmType.i64, "rsi")
 
-r   = lambda n: Register_KNL(AsmType.i64, "r"+str(n))
-xmm = lambda n: Register_KNL(AsmType.f64x2, "xmm"+str(n))
-ymm = lambda n: Register_KNL(AsmType.f64x4, "ymm"+str(n))
-zmm = lambda n: Register_KNL(AsmType.f64x8, "zmm"+str(n))
-
-
+r = lambda n: Register_KNL(AsmType.i64, "r" + str(n))
+xmm = lambda n: Register_KNL(AsmType.f64x2, "xmm" + str(n))
+ymm = lambda n: Register_KNL(AsmType.f64x4, "ymm" + str(n))
+zmm = lambda n: Register_KNL(AsmType.f64x8, "zmm" + str(n))
 
 
 class MemoryAddress_KNL(MemoryAddress):
-    
+
     def __init__(self,
                  base: Register,
                  disp: int,
@@ -69,14 +67,9 @@ class MemoryAddress_KNL(MemoryAddress):
     @property
     def ugly(self):
         if self.index is None:
-            return "{}({})".format(self.disp,self.base.ugly)
-        return "{}({},{},{})".format(self.disp,self.base.ugly,self.index.ugly,self.scaling)
+            return "{}({})".format(self.disp, self.base.ugly)
+        return "{}({},{},{})".format(self.disp, self.base.ugly, self.index.ugly, self.scaling)
+
 
 def mem(base, offset, index=None, scaling=None):
     return MemoryAddress_KNL(base, offset, index, scaling)
-
-
-
-
-
-
