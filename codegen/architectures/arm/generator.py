@@ -1,10 +1,7 @@
-from cursors import *
-
 from codegen.architectures.arm.operands import *
-from codegen.ast import *
-from codegen.sugar import *
 from codegen.generator import *
 from codegen.precision import *
+from codegen.sugar import *
 
 
 class Generator(AbstractGenerator):
