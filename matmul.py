@@ -1,20 +1,17 @@
 from typing import Tuple
 
-from codegen.ast import *
-from codegen.sugar import *
-from codegen.forms import *
-from codegen.precision import *
-
-import scripts.old_arm
-import scripts.max_bn_knl
-
-from cursors import *
-
-import architecture
 import numpy
 
-def decompose_pattern(k, n, pattern:Matrix[bool], bk:int, bn:int) -> Tuple[Matrix[int], List[Matrix[bool]]]:
-    Bk,Bn = k//bk, n//bn
+import architecture
+import scripts.max_bn_knl
+import scripts.old_arm
+from codegen.forms import *
+from codegen.precision import *
+from cursors import *
+
+
+def decompose_pattern(k, n, pattern: Matrix[bool], bk: int, bn: int) -> Tuple[Matrix[int], List[Matrix[bool]]]:
+    Bk, Bn = k // bk, n // bn
     patterns = []
     x = 0
 
@@ -26,20 +23,20 @@ def decompose_pattern(k, n, pattern:Matrix[bool], bk:int, bn:int) -> Tuple[Matri
     if k_overhead > 0:
         Bk += 1
 
-    blocks = Matrix.full(Bk,Bn,-1)
+    blocks = Matrix.full(Bk, Bn, -1)
 
     for Bni in range(Bn):
         for Bki in range(Bk):
             if Bni + 1 == Bn and n_overhead > 0 and Bki + 1 == Bk and k_overhead > 0:
-                block = pattern[(Bki*bk):((Bki+1)*bk+k_overhead), (Bni*bn):((Bni)*bn+n_overhead)]
+                block = pattern[(Bki * bk):((Bki + 1) * bk + k_overhead), (Bni * bn):((Bni) * bn + n_overhead)]
             elif Bni + 1 == Bn and n_overhead > 0:
-                block = pattern[(Bki*bk):((Bki+1)*bk), (Bni*bn):((Bni)*bn+n_overhead)]
+                block = pattern[(Bki * bk):((Bki + 1) * bk), (Bni * bn):((Bni) * bn + n_overhead)]
             elif Bki + 1 == Bk and k_overhead > 0:
-                block = pattern[(Bki*bk):((Bki+1)*bk+k_overhead), (Bni*bn):((Bni+1)*bn)]
+                block = pattern[(Bki * bk):((Bki + 1) * bk + k_overhead), (Bni * bn):((Bni + 1) * bn)]
             else:
-                block = pattern[(Bki*bk):((Bki+1)*bk), (Bni*bn):((Bni+1)*bn)]
-            
-            blocks[Bki,Bni] = x
+                block = pattern[(Bki * bk):((Bki + 1) * bk), (Bni * bn):((Bni + 1) * bn)]
+
+            blocks[Bki, Bni] = x
             x += 1
             patterns.append(block)
 
@@ -52,13 +49,14 @@ def decompose_pattern(k, n, pattern:Matrix[bool], bk:int, bn:int) -> Tuple[Matri
 
     return blocks, patterns, mtx_overhead
 
+
 class MatMul:
     def __init__(self,
-                 m: int, 
-                 n: int, 
-                 k: int, 
-                 lda: int, 
-                 ldb: int, 
+                 m: int,
+                 n: int,
+                 k: int,
+                 lda: int,
+                 ldb: int,
                  ldc: int,
                  alpha: str,
                  beta: str,
@@ -67,8 +65,8 @@ class MatMul:
                  output_funcname: str = None,
                  output_filename: str = None,
                  output_overwrite: bool = False,
-                 bm: int = None, 
-                 bn: int = None, 
+                 bm: int = None,
+                 bn: int = None,
                  bk: int = None,
                  arch: str = 'knl',
                  precision: str = 'd',
@@ -85,16 +83,16 @@ class MatMul:
         self.ldc = ldc
 
         try:
-          self.alpha = float(alpha)
+            self.alpha = float(alpha)
         except:
-          self.alpha = 'generic'
+            self.alpha = 'generic'
         try:
-          self.beta = float(beta)
+            self.beta = float(beta)
         except:
-          self.beta = 'generic'
+            self.beta = 'generic'
 
         if arch == 'skx':
-          arch = 'knl'
+            arch = 'knl'
 
         self.arch = arch
         assert precision.lower() in ['s', 'd']
@@ -117,7 +115,7 @@ class MatMul:
                 (self.bm, self.bn) = scripts.max_bn_knl.getBlocksize(m, n, bk, self.v_size)
             elif arch == 'arm':
                 (self.bm, self.bn) = scripts.old_arm.getBlocksize(m, n, bk, self.v_size)
-        else: 
+        else:
             self.bm = bm
             self.bn = bn
 
@@ -141,7 +139,7 @@ class MatMul:
                     mtx[i, j] = 1
             pattern = Matrix(mtx)
 
-        blocks,patterns,mtx_overhead = decompose_pattern(self.k, self.n, pattern, self.bk, self.bn)
+        blocks, patterns, mtx_overhead = decompose_pattern(self.k, self.n, pattern, self.bk, self.bn)
 
         self.nnz = 0
         self.flop = 0
@@ -149,7 +147,7 @@ class MatMul:
         if ldb == 0:
             for i in range(n):
                 for j in range(k):
-                    if pattern[j,i]:
+                    if pattern[j, i]:
                         self.nnz += 1
             self.flop = self.nnz * m * 2
             self.nnz += sum(mtx_overhead)
@@ -162,15 +160,19 @@ class MatMul:
         else:
             prefetchReg = None
 
-        assert(self.m % self.v_size == 0)
+        assert (self.m % self.v_size == 0)
 
-        self.A_regs, self.B_regs, self.C_regs, self.starting_regs, self.alpha_reg, self.beta_reg, self.loop_reg, self.additional_regs = self.generator.make_reg_blocks(self.bm, self.bn, self.bk, self.v_size, self.nnz, self.m, self.n, self.k)
+        self.A_regs, self.B_regs, self.C_regs, self.starting_regs, self.alpha_reg, self.beta_reg, self.loop_reg, self.additional_regs = self.generator.make_reg_blocks(
+            self.bm, self.bn, self.bk, self.v_size, self.nnz, self.m, self.n, self.k)
 
-        self.A = DenseCursor("A", self.starting_regs[0], self.m, self.k, self.lda, self.bm, self.bk, self.precision.value)
-        self.B = BlockCursor("B", self.starting_regs[1], self.k, self.n, self.ldb, self.bk, self.bn, self.precision.value, blocks, patterns,mtx_overhead)
-        self.C = DenseCursor("C", self.starting_regs[2], self.m, self.n, self.ldc, self.bm, self.bn, self.precision.value)
-        self.C_pf = DenseCursor("C_pf", prefetchReg, self.m, self.n, self.ldc, self.bm, self.bn, self.precision.value) if prefetchReg else None
-
+        self.A = DenseCursor("A", self.starting_regs[0], self.m, self.k, self.lda, self.bm, self.bk,
+                             self.precision.value)
+        self.B = BlockCursor("B", self.starting_regs[1], self.k, self.n, self.ldb, self.bk, self.bn,
+                             self.precision.value, blocks, patterns, mtx_overhead)
+        self.C = DenseCursor("C", self.starting_regs[2], self.m, self.n, self.ldc, self.bm, self.bn,
+                             self.precision.value)
+        self.C_pf = DenseCursor("C_pf", prefetchReg, self.m, self.n, self.ldc, self.bm, self.bn,
+                                self.precision.value) if prefetchReg else None
 
     def make_nk_unroll(self):
 
@@ -194,68 +196,77 @@ class MatMul:
 
         asm.add(self.generator.make_b_pointers(self.starting_regs[1], self.additional_regs, self.nnz))
 
-        for Bni in range(0,Bn):
-            
+        for Bni in range(0, Bn):
+
             regs = self.C_regs
-            
+
             if Bni + 1 == Bn and n_overhead > 0:
                 regs = self.C_regs[0:vm, 0:n_overhead]
 
             if self.alpha == 1.0 and self.beta != 0.0:
-                asm.add(self.generator.move_register_block(self.C, C_ptr, Coords(), regs, self.v_size, self.additional_regs, None, False))
+                asm.add(
+                    self.generator.move_register_block(self.C, C_ptr, Coords(), regs, self.v_size, self.additional_regs,
+                                                       None, False))
                 if self.beta != 1.0:
                     for ic in range(regs.shape[1]):
                         for ir in range(regs.shape[0]):
-                            asm.add(mul(regs[ir,ic], self.beta_reg[1], regs[ir,ic]))
+                            asm.add(mul(regs[ir, ic], self.beta_reg[1], regs[ir, ic]))
             else:
                 asm.add(self.generator.make_zero_block(regs, self.additional_regs))
 
-            for Bki in range(0,Bk):
+            for Bki in range(0, Bk):
 
                 to_A = Coords(right=Bki)
                 to_B = Coords(right=Bni, down=Bki, absolute=True)
 
                 if self.B.has_nonzero_block(B_ptr, to_B):
-                    asm.add(self.generator.make_microkernel(self.A, self.B, A_ptr, B_ptr, self.A_regs, self.B_regs, regs, self.v_size, self.additional_regs, to_A, to_B))
+                    asm.add(
+                        self.generator.make_microkernel(self.A, self.B, A_ptr, B_ptr, self.A_regs, self.B_regs, regs,
+                                                        self.v_size, self.additional_regs, to_A, to_B))
 
             if self.alpha != 1.0:
                 store_block = block("")
-                
-                for x in range(0, regs.shape[1], self.A_regs.shape[1]):
-                    A_regs_cut = self.A_regs[0:min(self.A_regs.shape[0], regs.shape[0]), 0:regs.shape[1]-x]
-                    if self.beta != 0.0:
-                        store_block.add(self.generator.move_register_block(self.C, C_ptr, Coords(), A_regs_cut, self.v_size, self.additional_regs, None, False, None, self.ldc * x))
 
+                for x in range(0, regs.shape[1], self.A_regs.shape[1]):
+                    A_regs_cut = self.A_regs[0:min(self.A_regs.shape[0], regs.shape[0]), 0:regs.shape[1] - x]
+                    if self.beta != 0.0:
+                        store_block.add(
+                            self.generator.move_register_block(self.C, C_ptr, Coords(), A_regs_cut, self.v_size,
+                                                               self.additional_regs, None, False, None, self.ldc * x))
 
                     for ir in range(A_regs_cut.shape[0]):
                         for ic in range(A_regs_cut.shape[1]):
                             if self.beta != 0.0 and self.beta != 1.0:
-                                store_block.add(mul(A_regs_cut[ir,ic], self.beta_reg[1], A_regs_cut[ir,ic]))
+                                store_block.add(mul(A_regs_cut[ir, ic], self.beta_reg[1], A_regs_cut[ir, ic]))
                             if self.beta == 0.0:
-                                store_block.add(mul(regs[ir, x + ic], self.alpha_reg[1], A_regs_cut[ir, ic], "C = C + alpha * AB"))
+                                store_block.add(
+                                    mul(regs[ir, x + ic], self.alpha_reg[1], A_regs_cut[ir, ic], "C = C + alpha * AB"))
                             else:
-                                store_block.add(fma(regs[ir, x + ic], self.alpha_reg[1], A_regs_cut[ir, ic], "C = C + alpha * AB", False))
+                                store_block.add(
+                                    fma(regs[ir, x + ic], self.alpha_reg[1], A_regs_cut[ir, ic], "C = C + alpha * AB",
+                                        False))
 
-                    store_block.add(self.generator.move_register_block(self.C, C_ptr, Coords(), A_regs_cut, self.v_size, self.additional_regs, None, True, self.prefetching, self.ldc * x))
+                    store_block.add(self.generator.move_register_block(self.C, C_ptr, Coords(), A_regs_cut, self.v_size,
+                                                                       self.additional_regs, None, True,
+                                                                       self.prefetching, self.ldc * x))
                 asm.add(store_block)
 
             else:
-                asm.add(self.generator.move_register_block(self.C, C_ptr, Coords(), regs, self.v_size, self.additional_regs, None, True, self.prefetching))
+                asm.add(
+                    self.generator.move_register_block(self.C, C_ptr, Coords(), regs, self.v_size, self.additional_regs,
+                                                       None, True, self.prefetching))
 
-            if (Bni != Bn-1):
+            if (Bni != Bn - 1):
                 move_C, C_ptr = self.C.move(C_ptr, Coords(right=1))
                 asm.add(move_C)
                 if self.C_pf:
-                  move_C_pf, C_pf_ptr = self.C_pf.move(C_pf_ptr, Coords(right=1))
-                  asm.add(move_C_pf)
-
+                    move_C_pf, C_pf_ptr = self.C_pf.move(C_pf_ptr, Coords(right=1))
+                    asm.add(move_C_pf)
 
         return asm
 
-
-
     def make(self):
-        
+
         A_ptr = CursorLocation()
         C_ptr = CursorLocation()
         C_pf_ptr = CursorLocation()
@@ -268,18 +279,18 @@ class MatMul:
             Bn += 1
 
         loopBody = [
-          self.make_nk_unroll(),
-          self.A.move(A_ptr, Coords(down=1))[0],
-          self.C.move(C_ptr, Coords(down=1, right=1-Bn))[0]
+            self.make_nk_unroll(),
+            self.A.move(A_ptr, Coords(down=1))[0],
+            self.C.move(C_ptr, Coords(down=1, right=1 - Bn))[0]
         ]
         if self.C_pf:
-          loopBody.append(self.C_pf.move(C_pf_ptr, Coords(down=1, right=1-Bn))[0])
+            loopBody.append(self.C_pf.move(C_pf_ptr, Coords(down=1, right=1 - Bn))[0])
 
-        asm = block("unrolled_{}x{}x{}".format(self.m,self.n,self.k),
-            self.generator.bcst_alpha_beta(self.alpha_reg, self.beta_reg),
-            self.generator.make_scaling_offsets(self.additional_regs, self.nnz),
-            loop(self.loop_reg, 0, Bm, 1).body(*loopBody)
-        )
+        asm = block("unrolled_{}x{}x{}".format(self.m, self.n, self.k),
+                    self.generator.bcst_alpha_beta(self.alpha_reg, self.beta_reg),
+                    self.generator.make_scaling_offsets(self.additional_regs, self.nnz),
+                    loop(self.loop_reg, 0, Bm, 1).body(*loopBody)
+                    )
 
         vm_overhead = (self.m % self.bm) // self.v_size
 
@@ -290,6 +301,5 @@ class MatMul:
             self.C_regs = self.C_regs[0:self.bm // self.v_size, 0:self.bn]
             self.A.r = self.m
             asm.add(self.make_nk_unroll())
-
 
         return asm

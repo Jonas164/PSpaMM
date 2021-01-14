@@ -108,7 +108,7 @@ class InlinePrinter(Visitor):
             if stmt.dest2 is not None:
                 s = "ldp {}, {}, {}".format(stmt.dest.ugly_scalar, stmt.dest2.ugly_scalar, src_str)
             else:
-                s = "ldr {}, {}".format(stmt.dest.ugly_scalar, src_str)
+                s = "ld1w {}, p0/z, {}".format(stmt.dest.ugly_scalar, src_str)
         else:
             raise NotImplementedError()
         self.addLine(s, stmt.comment)
@@ -125,7 +125,7 @@ class InlinePrinter(Visitor):
             if stmt.src2 is not None:
                 s = "stp {}, {}, {}".format(stmt.src.ugly_scalar, stmt.src2.ugly_scalar, stmt.dest.ugly)
             else:
-                s = "str {}, {}".format(stmt.src.ugly_scalar, stmt.dest.ugly)
+                s = "st1w {}, p0/z,{}".format(stmt.src.ugly_scalar, stmt.dest.ugly)
         else:
             raise NotImplementedError()
         self.addLine(s, stmt.comment)

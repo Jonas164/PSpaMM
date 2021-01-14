@@ -1,9 +1,8 @@
 from typing import Union
 
+import architecture
 from codegen.ast import *
 from codegen.operands import *
-
-import architecture
 
 
 # Convenient statement constructors

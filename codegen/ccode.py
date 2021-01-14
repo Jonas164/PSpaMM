@@ -1,12 +1,12 @@
-from codegen.ast import *
+import architecture
 from codegen.analysis import *
 from codegen.precision import *
 
-import architecture
 
-
-def make_cfunc(funcName:str, template:str, body:Block, flop:int, starting_regs:List[Register], precision: Precision) -> str:
-    Printer_class = architecture.get_class("codegen.architectures." + architecture.arch + ".inlineprinter.InlinePrinter")
+def make_cfunc(funcName: str, template: str, body: Block, flop: int, starting_regs: List[Register],
+               precision: Precision) -> str:
+    Printer_class = architecture.get_class(
+        "codegen.architectures." + architecture.arch + ".inlineprinter_sve.InlinePrinter")
 
     printer = Printer_class(precision)
     printer.lmargin = 4
@@ -18,9 +18,8 @@ def make_cfunc(funcName:str, template:str, body:Block, flop:int, starting_regs:L
     regs = ['"{}"'.format(reg.clobbered) for reg in analyzer.clobbered_registers]
     regs.sort()
     clobbered = ",".join(regs)
-    return template.format(funcName = funcName,
-                           body_text = body_text,
-                           clobbered = clobbered,
-                           flop = flop,
-                           real_type = Precision.getCType(precision))
-
+    return template.format(funcName=funcName,
+                           body_text=body_text,
+                           clobbered=clobbered,
+                           flop=flop,
+                           real_type=Precision.getCType(precision))

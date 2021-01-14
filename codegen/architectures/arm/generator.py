@@ -1,4 +1,4 @@
-from codegen.architectures.arm.operands import *
+from codegen.architectures.arm.operands_sve import *
 from codegen.generator import *
 from codegen.precision import *
 from codegen.sugar import *
@@ -19,18 +19,12 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
 
     : : "m"(A), "m"(B), "m"(C), "m"(alpha), "m"(beta) : {clobbered});
     
-    #ifndef NDEBUG
-    #ifdef _OPENMP
-    #pragma omp atomic
-    #endif
-    pspamm_num_total_flops += {{flop}};
-    #endif
 
 }}}};"""
 
     def get_v_size(self):
         if self.precision == Precision.DOUBLE:
-            return 2
+            return 4
         raise NotImplementedError
 
     def get_template(self):
@@ -39,7 +33,7 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
     def make_reg_blocks(self, bm: int, bn: int, bk: int, v_size: int, nnz: int, m: int, n: int, k: int):
         assert (bm % v_size == 0)
         vm = bm // v_size
-        assert ((bn + bk) * vm + bn * bk + 2 <= 32)  # Needs to fit in NEON v registers
+        assert ((bn + bk) * vm + bn * bk + 2 <= 64)  # Needs to fit in NEON v registers
 
         A_regs = Matrix([[v(vm * c + r + 2) for c in range(bk)] for r in range(vm)])
         B_regs = Matrix([[v(vm * bk + 2 + bn * r + c) for c in range(bn)] for r in range(bk)])
@@ -187,7 +181,7 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
         mask = sparse_mask(A_regs, A, A_ptr, to_A_block, B, B_ptr, to_B_block, v_size)
         asm.add(self.move_register_block(A, A_ptr, to_A_block, A_regs, v_size, additional_regs, mask, store=False))
 
-        x = 0;
+        x = 0
         bs = []
         cur11 = -1000
         for Vmi in range(bm // v_size):
@@ -212,7 +206,7 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
 
         for Vmi in range(bm // v_size):
             for bki in range(bk):  # inside this k-block
-                for bni in range(bn):  # inside this n-block
+                for bni in range(0, 2, bn):  # inside this n-block
                     to_cell = Coords(down=bki, right=bni)
                     if B.has_nonzero_cell(B_ptr, to_B_block, to_cell):
                         B_cell_addr, B_comment = B.look(B_ptr, to_B_block, to_cell)
