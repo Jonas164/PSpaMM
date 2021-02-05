@@ -18,13 +18,6 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
     {body_text}
 
     : : "m"(A), "m"(B), "m"(C), "m"(alpha), "m"(beta) : {clobbered});
-    
-    #ifndef NDEBUG
-    #ifdef _OPENMP
-    #pragma omp atomic
-    #endif
-    pspamm_num_total_flops += {{flop}};
-    #endif
 
 }}}};"""
 
