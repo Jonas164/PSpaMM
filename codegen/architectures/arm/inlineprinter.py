@@ -63,19 +63,15 @@ class InlinePrinter(Visitor):
 
     def visitAdd(self, stmt: AddStmt):
         if isinstance(stmt.src, Constant) and (stmt.src.value > 4095 or stmt.src.value < -4095):
-            # s = "movz x11, #{}".format((stmt.src.value) & 0xFFFF)
-            # val = ((stmt.src.value >> 16) & 0xFFFF)
-            #     s2 = "movk x11, #{}, lsl #16".format(val)
-            #     self.addLine(s2, "load upper 16 bit of immediate that requires more than 16 bit")
-            # self.addLine(s, "load lower 16 bit of immediate that requires more than 16 bit")
-            # if val > 70000:
-            #     print(stmt.src.value)
-            #     print(bin(stmt.src.value))
-            #     print(s)
-            #     print (s2)
-            # else:
-            s = "mov x11, {}".format(stmt.src.ugly)
-            self.addLine(s, "load lower 16 bit of immediate ")
+            s = "movz x11, #{}".format((stmt.src.value) & 0xFFFF)
+            val = ((stmt.src.value >> 16) & 0xFFFF)
+            s2 = "movk x11, #{}, lsl #16".format(val)
+            self.addLine(s2, "load upper 16 bit of immediate that requires more than 16 bit")
+            self.addLine(s, "load lower 16 bit of immediate that requires more than 16 bit")
+            
+            #This is how it was done before:
+            # s = "mov x11, {}".format(stmt.src.ugly)
+            # self.addLine(s, "load lower 16 bit of immediate ")
 
             if stmt.dest.ugly != "x11":
                 s = "add {}, {}, x11".format(stmt.dest.ugly,stmt.dest.ugly)
