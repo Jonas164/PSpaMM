@@ -1,12 +1,10 @@
-from typing import List
 from codegen.ast import *
-from codegen.visitor import Visitor
 from codegen.operands import *
 from codegen.precision import *
+from codegen.visitor import Visitor
 
 
 class InlinePrinter(Visitor):
-
     show_comments = False
     indent = "  "
     depth = 0
@@ -15,7 +13,6 @@ class InlinePrinter(Visitor):
     vpadding = False
     output = None
     stack = None
-
 
     def __init__(self, precision: Precision):
         self.output = []
@@ -26,10 +23,9 @@ class InlinePrinter(Visitor):
     def show(self):
         print("\n".join(self.output))
 
-
     def addLine(self, stmt: str, comment: str):
 
-        line = " "*self.lmargin + self.indent*self.depth
+        line = " " * self.lmargin + self.indent * self.depth
 
         if stmt is not None and comment is not None and self.show_comments:
             stmt = '"' + stmt + '\\r\\n"'
@@ -43,8 +39,6 @@ class InlinePrinter(Visitor):
 
         self.output.append(line)
 
-
-
     def visitFma(self, stmt: FmaStmt):
         b = stmt.bcast_src.ugly
         m = stmt.mult_src.ugly
@@ -52,24 +46,24 @@ class InlinePrinter(Visitor):
         if stmt.bcast:
             s = "vfmadd231p{} {}%{{1to{}%}}, {}, {}".format(self.precision, b, 8 if self.precision == 'd' else 16, m, a)
         else:
-            s = "vfmadd231p{} {}, {}, {}".format(self.precision, b,m,a)
+            s = "vfmadd231p{} {}, {}, {}".format(self.precision, b, m, a)
         self.addLine(s, stmt.comment)
 
     def visitMul(self, stmt: MulStmt):
         b = stmt.src.ugly
         m = stmt.mult_src.ugly
         a = stmt.dest.ugly
-        s = "vmulp{} {}, {}, {}".format(self.precision, b,m,a)
+        s = "vmulp{} {}, {}, {}".format(self.precision, b, m, a)
         self.addLine(s, stmt.comment)
 
     def visitBcst(self, stmt: BcstStmt):
         b = stmt.bcast_src.ugly
         a = stmt.dest.ugly
-        s = "vbroadcasts{} {}, {}".format(self.precision, b,a)
+        s = "vbroadcasts{} {}, {}".format(self.precision, b, a)
         self.addLine(s, stmt.comment)
 
     def visitAdd(self, stmt: AddStmt):
-        s = "addq {}, {}".format(stmt.src.ugly,stmt.dest.ugly)
+        s = "addq {}, {}".format(stmt.src.ugly, stmt.dest.ugly)
         self.addLine(s, stmt.comment)
 
     def visitLabel(self, stmt: LabelStmt):
@@ -77,7 +71,7 @@ class InlinePrinter(Visitor):
         self.addLine(s, stmt.comment)
 
     def visitCmp(self, stmt: CmpStmt):
-        s = "cmp {}, {}".format(stmt.lhs.ugly,stmt.rhs.ugly)
+        s = "cmp {}, {}".format(stmt.lhs.ugly, stmt.rhs.ugly)
         self.addLine(s, stmt.comment)
 
     def visitJump(self, stmt: JumpStmt):
@@ -91,18 +85,18 @@ class InlinePrinter(Visitor):
             src_str = stmt.src.ugly
 
         if stmt.typ == AsmType.i64:
-            s = "movq {}, {}".format(src_str,stmt.dest.ugly)
+            s = "movq {}, {}".format(src_str, stmt.dest.ugly)
         elif stmt.typ == AsmType.f64x8 and stmt.aligned:
             if isinstance(stmt.src, Constant) and stmt.src.value == 0:
-                s = "vpxord {}, {}, {}".format(stmt.dest.ugly,stmt.dest.ugly,stmt.dest.ugly)
+                s = "vpxord {}, {}, {}".format(stmt.dest.ugly, stmt.dest.ugly, stmt.dest.ugly)
             else:
-                s = "vmovap{} {}, {}".format(self.precision, src_str,stmt.dest.ugly)
+                s = "vmovap{} {}, {}".format(self.precision, src_str, stmt.dest.ugly)
         else:
             raise NotImplementedError()
         self.addLine(s, stmt.comment)
 
     def visitLea(self, stmt: LeaStmt):
-        s = "leaq {}({}), {}".format(stmt.offset,stmt.src.ugly,stmt.dest.ugly)
+        s = "leaq {}({}), {}".format(stmt.offset, stmt.src.ugly, stmt.dest.ugly)
         self.addLine(s, stmt.comment)
 
     def visitPrefetch(self, stmt: PrefetchStmt):

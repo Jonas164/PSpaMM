@@ -57,26 +57,8 @@ class InlinePrinter(Visitor):
 
     def visitAdd(self, stmt: AddStmt):
         if isinstance(stmt.src, Constant) and (stmt.src.value > 4095 or stmt.src.value < -4095):
-            if (stmt.src.value >> 16) & 0xFFFF > 0 and stmt.src.value < 0:
-                print(stmt.src.value & 0xFFFF)
-                s = "mov x11, #-1"
-                s1 = "movk x11, #{}".format((stmt.src.value) & 0xFFFF)
-                val = ((stmt.src.value >> 16) & 0xFFFF)
-                s2 = "movk x11, #{}, lsl #16".format(val)
-            
-                self.addLine(s, "")
-                self.addLine(s1, "load lower 16 bit of immediate that requires more than 16 bit")
-                self.addLine(s2, "load upper 16 bit of immediate that requires more than 16 bit")
-            
-            elif (stmt.src.value >> 16) & 0xFFFF:
-                s1 = "mov x11, #{}".format((stmt.src.value) & 0xFFFF)
-                val = ((stmt.src.value >> 16) & 0xFFFF)
-                s2 = "movk x11, #{}, lsl #16".format(val)
-                self.addLine(s1, "load lower 16 bit of immediate that requires more than 16 bit")
-                self.addLine(s2, "load upper 16 bit of immediate that requires more than 16 bit")
-            else:
-                s = "mov x11, {}".format(stmt.src.ugly)
-                self.addLine(s, "load lower 16 bit of immediate ")
+            s = "mov x11, {}".format(stmt.src.ugly)
+            self.addLine(s, "load immediate that requires more than 12 bit")
 
             if stmt.dest.ugly != "x11":
                 s = "add {}, {}, x11".format(stmt.dest.ugly, stmt.dest.ugly)
@@ -126,7 +108,7 @@ class InlinePrinter(Visitor):
             if stmt.dest2 is not None:
                 s = "ldp {}, {}, {}".format(stmt.dest.ugly_scalar, stmt.dest2.ugly_scalar, src_str)
             else:
-                s = "ldr {}, {}".format(stmt.dest.ugly_scalar, src_str)
+                s = "ld1w {}, p0/z, {}".format(stmt.dest.ugly_scalar, src_str)
         else:
             raise NotImplementedError()
         self.addLine(s, stmt.comment)
@@ -143,7 +125,7 @@ class InlinePrinter(Visitor):
             if stmt.src2 is not None:
                 s = "stp {}, {}, {}".format(stmt.src.ugly_scalar, stmt.src2.ugly_scalar, stmt.dest.ugly)
             else:
-                s = "str {}, {}".format(stmt.src.ugly_scalar, stmt.dest.ugly)
+                s = "st1w {}, p0/z,{}".format(stmt.src.ugly_scalar, stmt.dest.ugly)
         else:
             raise NotImplementedError()
         self.addLine(s, stmt.comment)

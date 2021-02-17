@@ -14,18 +14,6 @@ class Constant_ARM(Constant):
     def ugly(self):
         return "#{}".format(self.value)
 
-    @property
-    def ugly_large(self):
-        return "={}".format(self.value)
-
-    @property
-    def ugly_lower16(self):
-        return "#:lower16:{}".format(self.value)
-    
-    @property
-    def ugly_upper16(self):
-        return "#:upper16:{}".format(self.value)
-
 
 def c(n):
     """Sugar for conveniently defining integer constants"""
@@ -55,11 +43,12 @@ class Register_ARM(Register):
 
     @property
     def ugly_scalar(self):
-        return (self.value.split(".")[0]).replace("v", "q")
+        return self.value
+        # return (self.value.split(".")[0]).replace("z", "q")
 
     @property
     def ugly_scalar_1d(self):
-        return (self.value.split(".")[0]).replace("v", "d")
+        return (self.value.split(".")[0]).replace("z", "d")
 
     @property
     def ugly_1d(self):
@@ -68,7 +57,7 @@ class Register_ARM(Register):
 
 r = lambda n: Register_ARM(AsmType.i64, "x" + str(n))
 xzr = Register_ARM(AsmType.i64, "xzr")
-v = lambda n: Register_ARM(AsmType.f64x8, "v" + str(n) + ".2d")
+v = lambda n: Register_ARM(AsmType.f64x8, "z" + str(n) + ".d")
 
 
 class MemoryAddress_ARM(MemoryAddress):

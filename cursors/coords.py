@@ -9,18 +9,19 @@ from collections import namedtuple
 C = namedtuple('C', 'down right absolute')
 C.__new__.__defaults__ = (0, 0, False)
 
+
 class Coords(C):
 
     def copy(self):
         return Coords(self.down, self.right, self.absolute)
-    
+
     def __add__(self, other):
         absolute = self.absolute | other.absolute
-        return Coords(self.down+other.down, self.right+other.right, absolute)
+        return Coords(self.down + other.down, self.right + other.right, absolute)
 
     def __sub__(self, other):
         absolute = self.absolute != other.absolute  # TODO: What is the math behind this?
-        return Coords(self.down-other.down, self.right-other.right, absolute)
+        return Coords(self.down - other.down, self.right - other.right, absolute)
 
     def __neg__(self, other):
         return Coords(-self.down, -self.right, self.absolute)
@@ -35,4 +36,4 @@ class Coords(C):
             absolute = ", absolute"
         else:
             absolute = ""
-        return "(d={},r={}{})".format(self.down, self.right,absolute) 
+        return "(d={},r={}{})".format(self.down, self.right, absolute)

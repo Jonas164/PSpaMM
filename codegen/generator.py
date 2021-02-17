@@ -1,14 +1,16 @@
-from cursors import *
+from abc import ABC, abstractmethod
+
 from codegen.ast import *
 from codegen.precision import *
-from abc import ABC, abstractmethod
+from cursors import *
+
 
 class AbstractGenerator(ABC):
     def __init__(self, precision: Precision):
-      self.precision = precision
+        self.precision = precision
 
     def get_precision(self):
-      return self.precision
+        return self.precision
 
     @abstractmethod
     def get_v_size(self):
@@ -19,7 +21,7 @@ class AbstractGenerator(ABC):
         pass
 
     @abstractmethod
-    def make_reg_blocks(self, bm:int, bn:int, bk:int, v_size:int, nnz:int, m:int, n:int, k:int):
+    def make_reg_blocks(self, bm: int, bn: int, bk: int, v_size: int, nnz: int, m: int, n: int, k: int):
         pass
 
     @abstractmethod
@@ -48,7 +50,7 @@ class AbstractGenerator(ABC):
                          A_regs: Matrix[Register],
                          B_regs,
                          C_regs: Matrix[Register],
-                         v_size:int,
+                         v_size: int,
                          additional_regs,
                          to_A_block: Coords = Coords(),
                          to_B_block: Coords = Coords()
