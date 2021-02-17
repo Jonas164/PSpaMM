@@ -18,8 +18,6 @@ void {funcName} (const {real_type}* A, const {real_type}* B, {real_type}* C, {re
     {body_text}
 
     : : "m"(A), "m"(B), "m"(C), "m"(alpha), "m"(beta) : {clobbered});
-    
-
 }}}};"""
 
     def get_v_size(self):
