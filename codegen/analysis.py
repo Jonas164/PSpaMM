@@ -1,8 +1,7 @@
-from typing import List
-
-from codegen.sugar import *
 from codegen.visitor import Visitor
+from codegen.sugar import *
 
+from typing import List, Set
 
 class Analyzer(Visitor):
 
@@ -34,7 +33,7 @@ class Analyzer(Visitor):
             self.clobbered_registers.add(stmt.dest)
 
     def visitLea(self, stmt: MovStmt):
-        self.clobbered_registers.add(stmt.dest)
+            self.clobbered_registers.add(stmt.dest)
 
     def visitStore(self, stmt: MovStmt):
         if isinstance(stmt.dest, Register):
@@ -55,3 +54,6 @@ class Analyzer(Visitor):
         for stmt in block.contents:
             stmt.accept(self)
         self.stack.pop()
+
+
+

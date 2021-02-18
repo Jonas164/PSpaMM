@@ -1,44 +1,48 @@
-import os.path
-import random
-import subprocess
 from collections import namedtuple
+import subprocess
+import numpy as np
+import random
+import sys
+import os.path
+
 
 SparseKernel = namedtuple('SparseKernel', 'name m n k lda ldb ldc alpha beta block_sizes mtx delta')
 DenseKernel = namedtuple('DenseKernel', 'name m n k lda ldb ldc alpha beta block_sizes delta')
 
 
 def generateMTX(k, n, nnz):
-    assert (nnz <= k * n)
 
-    filename = 'mtx/' + str(k) + 'x' + str(n) + '_' + str(nnz) + '.mtx'
+	assert(nnz <= k * n)
 
-    if os.path.isfile(filename):
-        return filename
+	filename = 'mtx/' + str(k) + 'x' + str(n) + '_' + str(nnz) + '.mtx'
+	
+	if os.path.isfile(filename):
+		return filename 
 
-    f = open(filename, 'w')
+	f = open(filename, 'w')
 
-    f.write('%%MatrixMarket matrix coordinate real general\n%\n' + str(k) + ' ' + str(n) + ' ' + str(nnz))
+	f.write('%%MatrixMarket matrix coordinate real general\n%\n' + str(k) + ' ' + str(n) + ' ' + str(nnz))
 
-    zeros = set()
+	zeros = set()
 
-    for i in range(1, k + 1):
-        for j in range(1, n + 1):
-            zeros.add((i, j))
+	for i in range(1,k+1):
+		for j in range(1,n+1):
+			zeros.add((i,j))
 
-    nonzeros = random.sample(zeros, nnz)
+	nonzeros = random.sample(zeros, nnz)
 
-    for entry in nonzeros:
-        f.write('\n' + str(entry[0]) + ' ' + str(entry[1]) + ' ' + str(random.uniform(0.00001, 1000)))
+	for entry in nonzeros:
+		f.write('\n' + str(entry[0]) + ' ' + str(entry[1]) + ' ' + str(random.uniform(0.00001, 1000)))
 
-    f.close()
+	f.close()
 
-    return filename
-
+	return filename
 
 def make(kernels, arch):
-    f = open('testsuite.cpp', 'w')
 
-    f.write("""#include <fstream>
+  f = open('testsuite.cpp', 'w')
+  	
+  f.write("""#include <fstream>
 #include <sstream>
 #include <vector>
 #include <cstring>
@@ -50,41 +54,39 @@ def make(kernels, arch):
 long long pspamm_num_total_flops = 0;
 """)
 
-    for kern in kernels:
+  for kern in kernels:
 
-        arguments = ['./../pspamm.py', str(kern.m), str(kern.n), str(kern.k), str(kern.lda), str(kern.ldb),
-                     str(kern.ldc), str(kern.alpha), str(kern.beta)]
+  	arguments = ['./../pspamm.py', str(kern.m), str(kern.n), str(kern.k), str(kern.lda), str(kern.ldb), str(kern.ldc), str(kern.alpha), str(kern.beta)]
 
-        if isinstance(kern, SparseKernel):
-            arguments += ['--mtx_filename', kern.mtx]
+  	if isinstance(kern, SparseKernel):
+  		arguments += ['--mtx_filename', kern.mtx]
 
-        block_sizes = list(set(kern.block_sizes))
+  	block_sizes = list(set(kern.block_sizes))
 
-        for bs in block_sizes:
-            bm = bs[0]
-            bn = bs[1]
+  	for bs in block_sizes:
+  		bm = bs[0]
+  		bn = bs[1]
 
-            if arch == "knl":
-                assert (bm % 8 == 0 and (bn + 1) * (bm / 8) <= 32)
-            elif arch == "arm":
-                assert (bm % 2 == 0 and (bn + 1) * (bm / 2) + bn <= 32)
+  		if arch == "knl":
+  			assert(bm % 8 == 0 and (bn+1) * (bm / 8) <= 32)
+  		elif arch == "arm":
+  			assert(bm % 2 == 0 and (bn+1) * (bm / 2) + bn <= 32)
 
-            name = kern.name + '_' + str(bm) + '_' + str(bn)
+  		name = kern.name + '_' + str(bm) + '_' + str(bn)
 
-            additional_args = ['--output_funcname', name, '--output_filename', arch + '/' + name + '.h',
-                               '--output_overwrite']
-            additional_args += ['--bm', str(bm), '--bn', str(bn), '--arch', arch]
+  		additional_args = ['--output_funcname', name, '--output_filename', arch + '/' + name + '.h', '--output_overwrite']
+  		additional_args += ['--bm', str(bm), '--bn', str(bn), '--arch', arch]
 
-            try:
-                subprocess.check_output(arguments + additional_args, stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as e:
-                raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+  		try:
+  			subprocess.check_output(arguments + additional_args,stderr=subprocess.STDOUT)
+  		except subprocess.CalledProcessError as e:
+  			raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
 
-            f.write('#include "' + arch + '/' + kern.name + '_' + str(bm) + '_' + str(bn) + '.h"\n')
+  		f.write('#include "' + arch + '/' + kern.name + '_' + str(bm) + '_' + str(bn) + '.h"\n')
 
-    f.write('\n')
+  f.write('\n')
 
-    f.write("""
+  f.write("""
 void gemm_ref(unsigned M, unsigned N, unsigned K, unsigned LDA, unsigned LDB, unsigned LDC, double ALPHA, double BETA, double* A, double* B, double* C) {
   for (unsigned col = 0; col < N; ++col) {
     for (unsigned row = 0; row < M; ++row) {
@@ -192,30 +194,30 @@ int main()
 
 """)
 
-    for kern in kernels:
+  for kern in kernels:
+  	
+  	block_sizes = list(set(kern.block_sizes))
+  	
+  	for bs in block_sizes:
+  		bm = bs[0]
+  		bn = bs[1]
+  		name = kern.name + '_' + str(bm) + '_' + str(bn)
+    
+  		if isinstance(kern, SparseKernel):
+  			mtx = kern.mtx
+  		else:
+  			mtx = ""
 
-        block_sizes = list(set(kern.block_sizes))
 
-        for bs in block_sizes:
-            bm = bs[0]
-            bn = bs[1]
-            name = kern.name + '_' + str(bm) + '_' + str(bn)
-
-            if isinstance(kern, SparseKernel):
-                mtx = kern.mtx
-            else:
-                mtx = ""
-
-            f.write("""
+  		f.write("""
   pointers = pre({m}, {n}, {k}, {lda}, {ldb}, {ldc}, "{mtx}");
   {name}(std::get<0>(pointers), std::get<{sparse}>(pointers), std::get<3>(pointers), {alpha}, {beta}, nullptr);
   result = post({m}, {n}, {k}, {lda}, {ldb}, {ldc}, {alpha}, {beta}, std::get<0>(pointers), std::get<1>(pointers), std::get<3>(pointers), std::get<4>(pointers), {delta:.7f});
   results.push_back(std::make_tuple("{name}", result));
   free(std::get<0>(pointers)); free(std::get<1>(pointers)); free(std::get<2>(pointers)); free(std::get<3>(pointers)); free(std::get<4>(pointers));
-""".format(m=kern.m, n=kern.n, k=kern.k, lda=kern.lda, ldb=kern.ldb, ldc=kern.ldc, alpha=kern.alpha, beta=kern.beta,
-           mtx=mtx, delta=kern.delta, name=name, sparse=2 if kern.ldb == 0 else 1))
+""".format(m = kern.m, n = kern.n, k = kern.k, lda = kern.lda, ldb = kern.ldb, ldc = kern.ldc, alpha = kern.alpha, beta = kern.beta, mtx = mtx, delta = kern.delta, name = name, sparse = 2 if kern.ldb == 0 else 1))
 
-    f.write("""
+  f.write("""
 
   int correct = 0;
   for(int i = 0; i < results.size(); i++)

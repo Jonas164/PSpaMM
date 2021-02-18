@@ -1,18 +1,20 @@
-from codegen.sugar import *
 
+from typing import List
+from codegen.sugar import *
 
 # TODO: We might eventually want to make this part of our syntax tree
 # in order to do unrolls and other fancy stuff with it
 class Loop(Block):
-    _labels = []
 
+    _labels = []
     def __init__(self,
                  iteration_var: Register,
                  initial_val: int,
                  final_val: int,
                  increment: int = 1,
                  body_contents: Block = None
-                 ) -> None:
+                ) -> None:
+
         self.iteration_var = iteration_var
         self.initial_val = initial_val
         self.final_val = final_val
@@ -37,7 +39,6 @@ class Loop(Block):
     def body(self, *args):
         self.body_contents = block("Loop body", *args)
         return self
-
 
 def loop(iter_var, initial_val, final_val, increment):
     return Loop(iter_var, initial_val, final_val, increment)
